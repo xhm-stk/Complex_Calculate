@@ -28,7 +28,7 @@ class ComplexCalculatorApp(ctk.CTk):
         super().__init__()
         self.title("Complex Number Calculator - Premium UI")
         self.geometry("1220x820")
-        self.minsize(1080, 740)
+        self.minsize(900, 560)
 
         # Modern dark palette
         self.colors = {
@@ -54,6 +54,7 @@ class ComplexCalculatorApp(ctk.CTk):
 
         self._build_header()
         self._build_tabs()
+        self._bind_enter_key()
 
     def _build_header(self):
         # Typography hierarchy: strong title + softer subtitle
@@ -73,6 +74,7 @@ class ComplexCalculatorApp(ctk.CTk):
     def _build_tabs(self):
         self.tabs = ctk.CTkTabview(
             self,
+            command=self._on_tab_change,
             corner_radius=12,
             fg_color=self.colors["card_soft"],
             segmented_button_fg_color=self.colors["card"],
@@ -103,10 +105,22 @@ class ComplexCalculatorApp(ctk.CTk):
             border_color=self.colors["border"],
         )
 
+    def _scrollable_card(self, parent) -> ctk.CTkScrollableFrame:
+        """Input card with built-in scrollbar for small screens."""
+        return ctk.CTkScrollableFrame(
+            parent,
+            corner_radius=16,
+            fg_color=self.colors["card"],
+            border_width=1,
+            border_color=self.colors["border"],
+            scrollbar_button_color=self.colors["border"],
+            scrollbar_button_hover_color=self.colors["accent"],
+        )
+
     def _build_split_tab(self, tab, tab_key: str, title: str, subtitle: str):
         container = ctk.CTkFrame(tab, fg_color="transparent")
         container.pack(fill="both", expand=True, padx=16, pady=16)
-        container.grid_columnconfigure(0, weight=5)
+        container.grid_columnconfigure(0, weight=4)
         container.grid_columnconfigure(1, weight=6)
         container.grid_rowconfigure(1, weight=1)
 
@@ -128,7 +142,7 @@ class ComplexCalculatorApp(ctk.CTk):
             font=ctk.CTkFont(size=12),
         ).grid(row=1, column=0, sticky="w", pady=(4, 0))
 
-        left = self._styled_card(container, is_output=False)
+        left = self._scrollable_card(container)
         left.grid(row=1, column=0, sticky="nsew", padx=(0, 10))
         right = self._styled_card(container, is_output=True)
         right.grid(row=1, column=1, sticky="nsew", padx=(10, 0))
@@ -150,7 +164,7 @@ class ComplexCalculatorApp(ctk.CTk):
 
     def _entry_row(self, parent, label_text: str, placeholder: str = "") -> ctk.CTkEntry:
         row = ctk.CTkFrame(parent, fg_color="transparent")
-        row.pack(fill="x", padx=18, pady=4)
+        row.pack(fill="x", padx=18, pady=3)
         ctk.CTkLabel(
             row,
             text=label_text,
@@ -160,14 +174,14 @@ class ComplexCalculatorApp(ctk.CTk):
         ).pack(fill="x")
         entry = ctk.CTkEntry(
             row,
-            height=32,
+            height=30,
             corner_radius=10,
             placeholder_text=placeholder,
             fg_color="#0f1a2f",
             border_color=self.colors["border"],
             text_color=self.colors["text_main"],
         )
-        entry.pack(fill="x", pady=(6, 0))
+        entry.pack(fill="x", pady=(4, 0))
         return entry
 
     def _primary_button(self, parent, text: str, command):
@@ -175,7 +189,7 @@ class ComplexCalculatorApp(ctk.CTk):
             parent,
             text=text,
             command=command,
-            height=38,
+            height=34,
             corner_radius=10,
             fg_color=self.colors["accent"],
             hover_color=self.colors["accent_hover"],
@@ -188,7 +202,7 @@ class ComplexCalculatorApp(ctk.CTk):
             parent,
             text=text,
             command=command,
-            height=38,
+            height=34,
             corner_radius=10,
             fg_color="#223252",
             hover_color="#2a3f67",
@@ -238,7 +252,7 @@ class ComplexCalculatorApp(ctk.CTk):
             border_color=self.colors["accent"],
             border_width=1,
             text_color="#e7fbff",
-            font=ctk.CTkFont(family="Consolas", size=26, weight="bold"),
+            font=ctk.CTkFont(family="Consolas", size=20, weight="bold"),
         )
         latest_box.grid(row=4, column=0, sticky="nsew", padx=18, pady=(0, 18))
         latest_box.tag_config("center", justify="center")
@@ -601,6 +615,37 @@ class ComplexCalculatorApp(ctk.CTk):
         self.output_history[str(self.exp_result)] = []
         self._render_output(self.exp_result)
         self._clear_error("exp")
+
+    # ── UX helpers ──────────────────────────────────────────────
+
+    def _on_tab_change(self):
+        """Auto-focus first input field when switching tabs."""
+        first_entries = {
+            "Cartesian": self.z1_re,
+            "Polar": self.p1_r,
+            "Power & Roots": self.pr_r,
+            "Exponential": self.exp_x,
+        }
+        current = self.tabs.get()
+        entry = first_entries.get(current)
+        if entry:
+            entry.focus_set()
+
+    def _bind_enter_key(self):
+        """Bind Enter key to the primary calculation of the active tab."""
+        self.bind("<Return>", self._on_enter)
+
+    def _on_enter(self, event=None):
+        tab_actions = {
+            "Cartesian": self.calc_add,
+            "Polar": self.polar_add,
+            "Power & Roots": self.calc_power,
+            "Exponential": self.calc_exp_xy,
+        }
+        current = self.tabs.get()
+        action = tab_actions.get(current)
+        if action:
+            action()
 
 
 if __name__ == "__main__":
