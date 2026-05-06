@@ -333,11 +333,45 @@ class ComplexCalculatorApp(ctk.CTk):
             self.tab_power_roots,
             "power_roots",
             "Power & Roots (De Moivre)",
-            "Compute z^n and all n-th roots from polar input",
+            "Compute z^n and all n-th roots (Polar or Cartesian input)",
         )
-        self.pr_r = self._entry_row(left, "z radius (r)", "8")
-        self.pr_theta = self._entry_row(left, "z angle (theta, deg)", "180")
-        self.pr_n = self._entry_row(left, "n (integer)", "6")
+
+        # ── Input mode toggle ──
+        self.pr_input_mode = ctk.StringVar(value="polar")
+        mode_frame = ctk.CTkFrame(left, fg_color="transparent")
+        mode_frame.pack(fill="x", padx=18, pady=(6, 2))
+        ctk.CTkLabel(
+            mode_frame,
+            text="Input Mode:",
+            text_color=self.colors["text_sub"],
+            font=ctk.CTkFont(size=12),
+        ).pack(side="left", padx=(0, 8))
+        ctk.CTkSegmentedButton(
+            mode_frame,
+            values=["Polar", "Cartesian"],
+            command=self._on_pr_mode_change,
+            selected_color=self.colors["accent"],
+            selected_hover_color=self.colors["accent_hover"],
+            unselected_color=self.colors["card"],
+            unselected_hover_color="#1f2b44",
+            text_color="#03141a",
+            text_color_disabled=self.colors["text_sub"],
+            font=ctk.CTkFont(size=12, weight="bold"),
+        ).pack(side="left", fill="x", expand=True)
+
+        # ── Polar inputs ──
+        self.pr_polar_frame = ctk.CTkFrame(left, fg_color="transparent")
+        self.pr_polar_frame.pack(fill="x")
+        self.pr_r = self._entry_row(self.pr_polar_frame, "z radius (r)", "e.g. 8 or sqrt(2)")
+        self.pr_theta = self._entry_row(self.pr_polar_frame, "z angle (theta, deg)", "180")
+
+        # ── Cartesian inputs ──
+        self.pr_cart_frame = ctk.CTkFrame(left, fg_color="transparent")
+        self.pr_x = self._entry_row(self.pr_cart_frame, "z Real (x)", "e.g. 1/2, -8, sqrt(3)")
+        self.pr_y = self._entry_row(self.pr_cart_frame, "z Imag (y)", "e.g. 1/2, 0, sqrt(2)")
+        # Hidden by default (polar mode first)
+
+        self.pr_n = self._entry_row(left, "n (power/root degree)", "e.g. 6 or 1/6")
 
         btns = ctk.CTkFrame(left, fg_color="transparent")
         btns.pack(fill="x", padx=18, pady=(8, 8))
@@ -354,6 +388,19 @@ class ComplexCalculatorApp(ctk.CTk):
         )
         self.pr_result = self._build_output_area(right, "Output: Power & Roots")
 
+    def _on_pr_mode_change(self, value: str):
+        """Toggle between Polar and Cartesian input in Power & Roots tab."""
+        if value == "Cartesian":
+            self.pr_input_mode.set("cartesian")
+            self.pr_polar_frame.pack_forget()
+            self.pr_cart_frame.pack(fill="x", before=self.pr_n.master)
+            self.pr_x.focus_set()
+        else:
+            self.pr_input_mode.set("polar")
+            self.pr_cart_frame.pack_forget()
+            self.pr_polar_frame.pack(fill="x", before=self.pr_n.master)
+            self.pr_r.focus_set()
+
     def _build_exponential_tab(self):
         left, right = self._build_split_tab(
             self.tab_exponential,
@@ -364,14 +411,39 @@ class ComplexCalculatorApp(ctk.CTk):
         self.exp_x = self._entry_row(left, "x (real part)", "0")
         self.exp_y = self._entry_row(left, "y (imag part, rad)", "3.14159")
 
-        btns = ctk.CTkFrame(left, fg_color="transparent")
-        btns.pack(fill="x", padx=18, pady=(8, 8))
-        btns.grid_columnconfigure(0, weight=1)
-        self._primary_button(btns, "Compute e^(x+iy)", self.calc_exp_xy).grid(
+        btns1 = ctk.CTkFrame(left, fg_color="transparent")
+        btns1.pack(fill="x", padx=18, pady=(8, 4))
+        btns1.grid_columnconfigure(0, weight=1)
+        self._primary_button(btns1, "Compute e^(x+iy)", self.calc_exp_xy).grid(
             row=0, column=0, sticky="ew", padx=5, pady=5
         )
-        self._secondary_button(btns, "Verify e^(z1+z2) = e^z1 * e^z2", self.verify_exp_sum_property).grid(
-            row=1, column=0, sticky="ew", padx=5, pady=5
+
+        # ── Separator ──
+        sep = ctk.CTkFrame(left, fg_color=self.colors["border"], height=1)
+        sep.pack(fill="x", padx=18, pady=(8, 4))
+        ctk.CTkLabel(
+            left,
+            text="z1 & z2  (for  e^z1 , e^z2 , verify property)",
+            text_color=self.colors["accent"],
+            font=ctk.CTkFont(size=12, weight="bold"),
+        ).pack(anchor="w", padx=18, pady=(4, 2))
+
+        self.exp_z1_re = self._entry_row(left, "z1 Real (x1)", "1")
+        self.exp_z1_im = self._entry_row(left, "z1 Imag (y1)", "2")
+        self.exp_z2_re = self._entry_row(left, "z2 Real (x2)", "3")
+        self.exp_z2_im = self._entry_row(left, "z2 Imag (y2)", "-1")
+
+        btns2 = ctk.CTkFrame(left, fg_color="transparent")
+        btns2.pack(fill="x", padx=18, pady=(8, 8))
+        btns2.grid_columnconfigure((0, 1), weight=1)
+        self._primary_button(btns2, "Compute e^z1", self.calc_exp_z1).grid(
+            row=0, column=0, sticky="ew", padx=5, pady=5
+        )
+        self._primary_button(btns2, "Compute e^z2", self.calc_exp_z2).grid(
+            row=0, column=1, sticky="ew", padx=5, pady=5
+        )
+        self._secondary_button(btns2, "Verify e^(z1+z2) = e^z1 · e^z2", self.verify_exp_sum_property).grid(
+            row=1, column=0, columnspan=2, sticky="ew", padx=5, pady=5
         )
 
         self._secondary_button(left, "Clear Output", self.clear_exp).pack(
@@ -414,6 +486,17 @@ class ComplexCalculatorApp(ctk.CTk):
 
     def _clear_error(self, tab_key: str):
         self._set_error(tab_key, "")
+
+    def _eval_num(self, val_str: str) -> float:
+        """Evaluate a mathematical string like '1/2' or 'sqrt(3)' safely."""
+        val_str = val_str.strip()
+        if not val_str:
+            return 0.0
+        allowed_names = {k: v for k, v in math.__dict__.items() if not k.startswith("__")}
+        try:
+            return float(eval(val_str, {"__builtins__": None}, allowed_names))
+        except Exception:
+            raise ValueError(f"Invalid numeric input: {val_str}")
 
     def _read_cartesian(self) -> tuple[complex, complex]:
         x1 = float(self.z1_re.get())
@@ -546,35 +629,62 @@ class ComplexCalculatorApp(ctk.CTk):
         self._render_output(self.cart_result)
         self._clear_error("cartesian")
 
+    def _read_pr_complex(self) -> tuple[complex, float, float]:
+        """Read the complex number from Power & Roots tab (either mode).
+        Returns (z, r, theta_deg)."""
+        if self.pr_input_mode.get() == "cartesian":
+            x = self._eval_num(self.pr_x.get())
+            y = self._eval_num(self.pr_y.get())
+            z = complex(x, y)
+            r, theta_deg = polar_deg(z)
+        else:
+            r = self._eval_num(self.pr_r.get())
+            theta_deg = self._eval_num(self.pr_theta.get())
+            z = complex_from_polar_deg(r, theta_deg)
+        return z, r, theta_deg
+
     def calc_power(self):
         def run():
-            r = float(self.pr_r.get())
-            theta_deg = float(self.pr_theta.get())
-            n = int(self.pr_n.get())
-            z = complex_from_polar_deg(r, theta_deg)
+            z, r, theta_deg = self._read_pr_complex()
+            n = self._eval_num(self.pr_n.get())
             res = z ** n
             res_r, res_t = polar_deg(res)
-            self._append_result(self.pr_result, f"z^{n} = {fmt_complex(res)} = {res_r:.6g}∠{res_t:.6g} deg")
+            mode_label = "(Cartesian input)" if self.pr_input_mode.get() == "cartesian" else "(Polar input)"
+            n_str = f"{int(n)}" if n.is_integer() else f"{n:.6g}"
+            lines = [
+                f"{mode_label}  z = {fmt_complex(z)} = {r:.6g}∠{theta_deg:.6g}°",
+                f"z^{n_str} = {fmt_complex(res)} = {res_r:.6g}∠{res_t:.6g}°",
+            ]
+            self._append_result(self.pr_result, "\n".join(lines))
 
         self._safe_run(run, "power_roots")
 
     def calc_roots(self):
         def run():
-            r = float(self.pr_r.get())
-            theta_deg = float(self.pr_theta.get())
-            n = int(self.pr_n.get())
-            if n <= 0:
-                self._set_error("power_roots", "n must be a positive integer.")
-                return
+            z, r, theta_deg = self._read_pr_complex()
+            n_val = self._eval_num(self.pr_n.get())
 
-            lines = [f"All {n}-th roots of z:"]
+            # If user typed a fraction like 1/6 for 6th roots, smartly convert to 6
+            if 0 < n_val < 1 and math.isclose(1 / n_val, round(1 / n_val)):
+                n_val = round(1 / n_val)
+                
+            if not float(n_val).is_integer() or n_val <= 0:
+                self._set_error("power_roots", "n must be a positive integer (e.g. 6) or a simple fraction (e.g. 1/6).")
+                return
+            n = int(n_val)
+
             theta_rad = math.radians(theta_deg)
+            mode_label = "(Cartesian input)" if self.pr_input_mode.get() == "cartesian" else "(Polar input)"
+            lines = [
+                f"{mode_label}  z = {fmt_complex(z)} = {r:.6g}∠{theta_deg:.6g}°",
+                f"All {n}-th roots of z:",
+            ]
             root_r = r ** (1 / n)
             for k in range(n):
                 angle = (theta_rad + 2 * math.pi * k) / n
                 root_z = root_r * complex(math.cos(angle), math.sin(angle))
                 res_r, res_t = polar_deg(root_z)
-                lines.append(f"  k={k}: {fmt_complex(root_z)} = {res_r:.6g}∠{res_t:.6g} deg")
+                lines.append(f"  k={k}: {fmt_complex(root_z)} = {res_r:.6g}∠{res_t:.6g}°")
             self._append_result(self.pr_result, "\n".join(lines))
 
         self._safe_run(run, "power_roots")
@@ -584,29 +694,66 @@ class ComplexCalculatorApp(ctk.CTk):
         self._render_output(self.pr_result)
         self._clear_error("power_roots")
 
+    def _read_exp_z1z2(self) -> tuple[complex, complex]:
+        """Read z1 and z2 from the Exponential tab's own inputs."""
+        x1 = float(self.exp_z1_re.get())
+        y1 = float(self.exp_z1_im.get())
+        x2 = float(self.exp_z2_re.get())
+        y2 = float(self.exp_z2_im.get())
+        return complex(x1, y1), complex(x2, y2)
+
     def calc_exp_xy(self):
         def run():
             x = float(self.exp_x.get())
             y = float(self.exp_y.get())
             z = complex(x, y)
             res = cmath.exp(z)
-            self._append_result(self.exp_result, f"e^({x} + i{y}) = {fmt_complex(res)}")
+            r, t = polar_deg(res)
+            self._append_result(
+                self.exp_result,
+                f"e^({x} + i{y}) = {fmt_complex(res)}\n  = {r:.6g}∠{t:.6g}°",
+            )
+
+        self._safe_run(run, "exp")
+
+    def calc_exp_z1(self):
+        def run():
+            z1, _ = self._read_exp_z1z2()
+            res = cmath.exp(z1)
+            r, t = polar_deg(res)
+            self._append_result(
+                self.exp_result,
+                f"z1 = {fmt_complex(z1)}\ne^z1 = {fmt_complex(res)}\n  = {r:.6g}∠{t:.6g}°",
+            )
+
+        self._safe_run(run, "exp")
+
+    def calc_exp_z2(self):
+        def run():
+            _, z2 = self._read_exp_z1z2()
+            res = cmath.exp(z2)
+            r, t = polar_deg(res)
+            self._append_result(
+                self.exp_result,
+                f"z2 = {fmt_complex(z2)}\ne^z2 = {fmt_complex(res)}\n  = {r:.6g}∠{t:.6g}°",
+            )
 
         self._safe_run(run, "exp")
 
     def verify_exp_sum_property(self):
         def run():
-            z1, z2 = self._read_cartesian()
+            z1, z2 = self._read_exp_z1z2()
             res1 = cmath.exp(z1 + z2)
             res2 = cmath.exp(z1) * cmath.exp(z2)
             lines = [
+                f"z1 = {fmt_complex(z1)},  z2 = {fmt_complex(z2)}",
                 f"e^(z1+z2) = {fmt_complex(res1)}",
-                f"e^z1 * e^z2 = {fmt_complex(res2)}",
+                f"e^z1 · e^z2 = {fmt_complex(res2)}",
             ]
             if cmath.isclose(res1, res2):
-                lines.append("Property holds: e^(z1+z2) == e^z1 * e^z2")
+                lines.append("✓ Property holds: e^(z1+z2) == e^z1 · e^z2")
             else:
-                lines.append("Property differs due to numeric precision.")
+                lines.append("✗ Property differs due to numeric precision.")
             self._append_result(self.exp_result, "\n".join(lines))
 
         self._safe_run(run, "exp")
